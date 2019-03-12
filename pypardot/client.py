@@ -39,7 +39,7 @@ class PardotAPI(object):
         self.visitoractivities = VisitorActivities(self)
         self.campaigns = Campaigns(self)
 
-    def post(self, object_name, path=None, params=None, retries=0):
+    def post(self, object_name, path=None, params=None, retries=0, data=None):
         """
         Makes a POST request to the API. Checks for invalid requests that raise PardotAPIErrors. If the API key is
         invalid, one re-authentication request is made, in case the key has simply expired. If no errors are raised,
@@ -47,10 +47,13 @@ class PardotAPI(object):
         """
         if params is None:
             params = {}
-        params.update({'user_key': self.user_key, 'api_key': self.api_key, 'format': 'json'})
+        params.update({'format': 'json'})
+
         try:
             self._check_auth(object_name=object_name)
-            request = requests.post(self._full_path(object_name, path), params=params)
+            headers = {'Authorization': "Pardot api_key={}, user_key={}".format(self.api_key, self.user_key)} \
+                if self.api_key else {}
+            request = requests.post(self._full_path(object_name, path), params=params, data=data, headers=headers)
             response = self._check_response(request)
             return response
         except PardotAPIError as err:
@@ -68,10 +71,12 @@ class PardotAPI(object):
         """
         if params is None:
             params = {}
-        params.update({'user_key': self.user_key, 'api_key': self.api_key, 'format': 'json'})
+        params.update({'format': 'json'})
         try:
             self._check_auth(object_name=object_name)
-            request = requests.get(self._full_path(object_name, path), params=params)
+            headers = {'Authorization': "Pardot api_key={}, user_key={}".format(self.api_key, self.user_key)} \
+                if self.api_key else {}
+            request = requests.get(self._full_path(object_name, path), params=params, headers=headers)
             response = self._check_response(request)
             return response
         except PardotAPIError as err:
@@ -131,7 +136,8 @@ class PardotAPI(object):
          False if authentication fails.
         """
         try:
-            auth = self.post('login', params={'email': self.email, 'password': self.password})
+            data = {'email': self.email, 'password': self.password, 'user_key': self.user_key}
+            auth = self.post('login', data=data)
             self.api_key = auth.get('api_key')
             if self.api_key is not None:
                 return True
