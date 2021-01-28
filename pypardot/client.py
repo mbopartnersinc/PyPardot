@@ -24,9 +24,10 @@ BASE_URI = 'https://pi.pardot.com'
 # Because Salesforce supports lots of different methods for getting a valid token, this package won't try to solve
 # them all. Instead it will accept an already established token.
 class PardotAPI(object):
-    def __init__(self, salesforce_token):
+    def __init__(self, salesforce_token, salesforce_business_unit):
         assert salesforce_token, AttributeError("salesforce_token is a required attribute")
         self.salesforce_token = salesforce_token
+        self.salesforce_business_unit = salesforce_business_unit
 
         self.lists = Lists(self)
         self.emails = Emails(self)
@@ -106,4 +107,5 @@ class PardotAPI(object):
 
     @property
     def headers(self):
-        return {"Authorization": "Bearer {}".format(self.salesforce_token)}
+        return {'Authorization': "Bearer {}".format(self.salesforce_token),
+                'Pardot-Business-Unit-Id': self.salesforce_business_unit}
