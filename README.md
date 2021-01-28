@@ -1,9 +1,13 @@
 PyPardot
 =========
 
-### Note: Deprecated! See [PyPardot4](https://github.com/mneedham91/PyPardot4/) for API v4 support.
+PyPardot is a Python API wrapper for [Pardot](http://www.pardot.com/), version 3 APIs.
 
-PyPardot is an API wrapper for [Pardot](http://www.pardot.com/), written in Python.
+---
+**This version of the API is wholly owned and maintained by [MBO Partners](https://mbopartners.com/)**. The orginal
+version by joshgeller was abandoned in favor of version 4 (google it). Pardot vers 4 allows many prospects to have the
+same email address which will require a lot of rework in Marketplace.
+---
 
 Using it is simple:
 
