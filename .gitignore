@@ -12,3 +12,4 @@
 
 # PyCharm / Jetbrains IDE
 .idea
+venv

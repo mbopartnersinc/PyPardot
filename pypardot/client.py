@@ -12,8 +12,6 @@ from .objects.campaigns import Campaigns
 
 from .errors import PardotAPIError
 
-# Issue #1 (http://code.google.com/p/pybing/issues/detail?id=1)
-# Python 2.6 has json built in, 2.5 needs simplejson
 try:
     import json
 except ImportError:
@@ -22,12 +20,15 @@ except ImportError:
 BASE_URI = 'https://pi.pardot.com'
 
 
+# As of 2/14/21, Pardot will no longer support id/pw authentication in lieu of Salesforce token authentication.
+# Because Salesforce supports lots of different methods for getting a valid token, this package won't try to solve
+# them all. Instead it will accept an already established token.
 class PardotAPI(object):
-    def __init__(self, email, password, user_key):
-        self.email = email
-        self.password = password
-        self.user_key = user_key
-        self.api_key = None
+    def __init__(self, salesforce_token, salesforce_business_unit):
+        assert salesforce_token, AttributeError("salesforce_token is a required attribute")
+        self.salesforce_token = salesforce_token
+        self.salesforce_business_unit = salesforce_business_unit
+
         self.lists = Lists(self)
         self.emails = Emails(self)
         self.prospects = Prospects(self)
@@ -50,10 +51,7 @@ class PardotAPI(object):
         params.update({'format': 'json'})
 
         try:
-            self._check_auth(object_name=object_name)
-            headers = {'Authorization': "Pardot api_key={}, user_key={}".format(self.api_key, self.user_key)} \
-                if self.api_key else {}
-            request = requests.post(self._full_path(object_name, path), params=params, data=data, headers=headers)
+            request = requests.post(self._full_path(object_name, path), params=params, data=data, headers=self.headers)
             response = self._check_response(request)
             return response
         except PardotAPIError as err:
@@ -73,10 +71,7 @@ class PardotAPI(object):
             params = {}
         params.update({'format': 'json'})
         try:
-            self._check_auth(object_name=object_name)
-            headers = {'Authorization': "Pardot api_key={}, user_key={}".format(self.api_key, self.user_key)} \
-                if self.api_key else {}
-            request = requests.get(self._full_path(object_name, path), params=params, headers=headers)
+            request = requests.get(self._full_path(object_name, path), params=params, headers=self.headers)
             response = self._check_response(request)
             return response
         except PardotAPIError as err:
@@ -85,20 +80,6 @@ class PardotAPI(object):
                 return response
             else:
                 raise err
-
-    def _handle_expired_api_key(self, err, retries, method, object_name, path, params):
-        """
-        Tries to refresh an expired API key and re-issue the HTTP request. If the refresh has already been attempted,
-        an error is raised.
-        """
-        if retries != 0:
-            raise err
-        self.api_key = None
-        if self.authenticate():
-            response = getattr(self, method)(object_name=object_name, path=path, params=params, retries=1)
-            return response
-        else:
-            raise err
 
     @staticmethod
     def _full_path(object_name, path=None, version=3):
@@ -124,23 +105,7 @@ class PardotAPI(object):
         else:
             return response.status_code
 
-    def _check_auth(self, object_name):
-        if object_name == 'login':
-            return
-        if self.api_key is None:
-            self.authenticate()
-
-    def authenticate(self):
-        """
-         Authenticates the user and sets the API key if successful. Returns True if authentication is successful,
-         False if authentication fails.
-        """
-        try:
-            data = {'email': self.email, 'password': self.password, 'user_key': self.user_key}
-            auth = self.post('login', data=data)
-            self.api_key = auth.get('api_key')
-            if self.api_key is not None:
-                return True
-            return False
-        except PardotAPIError:
-            return False
+    @property
+    def headers(self):
+        return {'Authorization': "Bearer {}".format(self.salesforce_token),
+                'Pardot-Business-Unit-Id': self.salesforce_business_unit}
